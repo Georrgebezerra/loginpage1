@@ -1,0 +1,121 @@
+import sqlite3
+import tkinter as tk
+from tkinter import messagebox
+from email.message import EmailMessage
+import smtplib
+from PIL import Image, ImageTk
+
+class AuthenticationSystemGUI:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Authentication System")
+
+        # Initialize the database and the users table
+        self.connection = sqlite3.connect("users.db")
+        self.create_users_table()
+
+        # GUI components
+        self.username_label = tk.Label(root, text="Username:")
+        self.username_label.grid(row=0, column=0, padx=10, pady=10)
+
+        self.username_entry = tk.Entry(root)
+        self.username_entry.grid(row=0, column=1, padx=10, pady=10)
+
+        self.password_label = tk.Label(root, text="Password:")
+        self.password_label.grid(row=1, column=0, padx=10, pady=10)
+
+        self.password_entry = tk.Entry(root, show="*")
+        self.password_entry.grid(row=1, column=1, padx=10, pady=10)
+
+        self.phone_label = tk.Label(root, text="Phone:")
+        self.phone_label.grid(row=2, column=0, padx=10, pady=10)
+
+        self.phone_entry = tk.Entry(root)
+        self.phone_entry.grid(row=2, column=1, padx=10, pady=10)
+
+        self.address_label = tk.Label(root, text="Address:")
+        self.address_label.grid(row=3, column=0, padx=10, pady=10)
+
+        self.address_entry = tk.Entry(root)
+        self.address_entry.grid(row=3, column=1, padx=10, pady=10)
+
+        self.login_button = tk.Button(root, text="Login", command=self.perform_login)
+        self.login_button.grid(row=4, column=1, pady=10)
+
+        self.recover_password_button = tk.Button(root, text="Recover Password", command=self.recover_password)
+        self.recover_password_button.grid(row=4, column=0, pady=10)
+
+    def create_users_table(self):
+        try:
+            cursor = self.connection.cursor()
+            cursor.execute("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, password TEXT, email TEXT, phone TEXT, address TEXT, photo BLOB)")
+            self.connection.commit()
+        except Exception as e:
+            print(e)
+
+    def perform_login(self):
+        username = self.username_entry.get()
+        password = self.password_entry.get()
+        sql = "SELECT * FROM users WHERE username = ? AND password = ?"
+        try:
+            cursor = self.connection.cursor()
+            cursor.execute(sql, (username, password))
+            result = cursor.fetchone()
+
+            if result:
+                messagebox.showinfo("Authentication System", "Login successful!")
+            else:
+                messagebox.showerror("Authentication System", "Invalid credentials. Login failed.")
+
+        except Exception as e:
+            print(e)
+
+    def recover_password(self):
+        username = self.username_entry.get()
+        sql = "SELECT email FROM users WHERE username = ?"
+        try:
+            cursor = self.connection.cursor()
+            cursor.execute(sql, (username,))
+            result = cursor.fetchone()
+
+            if result:
+                email = result[0]
+                self.send_password_recovery_email(email)
+                messagebox.showinfo("Authentication System", f"A recovery email has been sent to {email}.")
+            else:
+                messagebox.showerror("Authentication System", "User not found.")
+
+        except Exception as e:
+            print(e)
+
+    def send_password_recovery_email(self, destination_email):
+        try:
+            # Configure the SMTP server (replace with your SMTP credentials)
+            smtp_server = "smtp.example.com"
+            smtp_port = 587
+            smtp_username = "your_email@example.com"
+            smtp_password = "your_password"
+
+            # Create email message
+            msg = EmailMessage()
+            msg.set_content("Link to reset the password...")  # Add a real link here
+
+            msg["Subject"] = "Password Recovery"
+            msg["From"] = smtp_username
+            msg["To"] = destination_email
+
+            # Configure SMTP server
+            with smtplib.SMTP(smtp_server, smtp_port) as server:
+                server.starttls()
+                server.login(smtp_username, smtp_password)
+
+                # Send email
+                server.send_message(msg)
+
+        except Exception as e:
+            print(e)
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = AuthenticationSystemGUI(root)
+    root.mainloop()
